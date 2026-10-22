@@ -50,6 +50,9 @@ def main():
                 highest_reward = total_reward
                 print("New highest reward: {total_reward}.")
 
+                saveQ(q_table, "best_q_table.npy") # Will save the new best Q-Table
+                print("Q-table saved!")
+
             env.reset()
             epsilon = max(0.01, epsilon * epsilon_decay)  # Decay epsilon
 
@@ -66,28 +69,38 @@ def learn(state, action, next_state, reward, q_table):
     alpha = 0.1
     gamma = 0.9
 
-    # TODO: Implement update Q values using the Bellman update equation
+    current_q = q_table[state, action]
+    max_future_q = np.max(q_table[next_state]) # Robot reached next state after taking the action, so look for the highest Q value in that new state (the row)
+
+    q_table[state, action] = current_q + alpha * (reward + gamma * max_future_q - current_q) # Bellman equation to renew the Q value using the new state to estimate future rewards
 
     return q_table
 
 
 def choose_action(state, q_table, epsilon, action_space):
-    action = 0
+    if random.random() > epsilon: # Choose a random number so that it will explore sometimes and exploit other times. This is the code for exploiting
+        
+        max_q = np.max(q_table[state]) # Chooses highest Q value
 
-    # TODO: Implement choose action.
+        best_actions = np.where(q_table[state] == max_q)[0] # Finds where the max Q value(s) is in the Q matrix and returns the column indice(s) in an array, indicating which action to take
+
+        action = random.choice(best_actions.tolist()) # Choose a random index from the array
+
+    else:
+        action = action_space.sample() # Choose a random action, either 0,1,2
     
     return action
 
 
 def saveQ(q_table, save_path):
 
-    # TODO: Implement saving the Q values
+    np.save(save_path, q_table)
 
     return
 
 def loadQ(load_path):
 
-    # TODO: Implement loading the Q values
+    np.load(load_path)
 
     return
 

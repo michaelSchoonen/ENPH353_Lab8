@@ -10,6 +10,10 @@ from rclpy.node import Node as RosNode
 from sensor_msgs.msg import Image as RosImage
 from geometry_msgs.msg import Twist as RosTwist
 
+DRIVE_SPEED = 0.2
+TURN_SPEED = 0.3
+DRIVE_WHILE_TURN_SPEED = 0.1
+
 NUM_OBS_STATES = 3
 NUM_ACTIONS = 3
 
@@ -140,7 +144,17 @@ class LineFollowerEnv(GazeboEnv):
         '''
         vel_cmd = RosTwist()
 
-        # TODO: Impelement process action.
+        if action == 0: # Left
+            vel_cmd.linear.x = DRIVE_WHILE_TURN_SPEED
+            vel_cmd.angular.z = TURN_SPEED
+
+        elif action == 1: # Forward
+            vel_cmd.linear.x = DRIVE_SPEED
+            vel_cmd.angular.z = 0.0
+
+        elif action == 2: # Right
+            vel_cmd.linear.x = DRIVE_WHILE_TURN_SPEED
+            vel_cmd.angular.z = -TURN_SPEED
         
         return vel_cmd
 
@@ -151,9 +165,18 @@ class LineFollowerEnv(GazeboEnv):
                a reward
         @retval reward: the reward for the current step
         '''
-        reward = 0
+        if terminated:
+            reward = -10
 
-        # TODO: Implement process reward.
+        elif state == 1: # The robot is aligned with the line
+            if action == 1:
+                reward = 6 # Extra reward if robot is driving straight and aligned with the line. 
+
+            else:
+                reward = 5
+
+        else:
+            reward = 1 # The robot is not aligned with the line
         
         return reward
 
@@ -169,12 +192,33 @@ class LineFollowerEnv(GazeboEnv):
         @retval terminated: the termination condition occured - the line is no 
                     longer in the field of the camera
         '''
-        cv_image = CvBridge().imgmsg_to_cv2(obs, desired_encoding='bgr8')
-
         state = 0
         terminated = False
+        
+        cv_image = CvBridge().imgmsg_to_cv2(obs, desired_encoding='bgr8')
 
-        # TODO: Implement process observation
+        gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY) # Grayscales the image
+
+        _, binary = cv2.threshold(gray, 70, 255, cv2.THRESH_BINARY_INV) # Makes all pixels with brightness below 70 white and the rest black to make the line stand out
+
+        height, width = binary.shape # Find image dimensions
+
+        left = binary[:, :width // 3] # splitting image into 3 sections
+        center = binary[:, width // 3:2 * width // 3]
+        right = binary[:, 2 * width // 3:]
+
+        left_count = cv2.countNonZero(left) # Counts the pixels of the line in each frame
+        center_count = cv2.countNonZero(center)
+        right_count = cv2.countNonZero(right)
+
+        # Determine if the line is visible
+        counts = [left_count, center_count, right_count]
+
+        if max(counts) < 10: # Buffer for noise
+            state = -1
+            terminated = True # Terminates the program if the line is no longer in the image (learned what not to do)
+        else:
+            state = int(np.argmax(counts)) # The state is the count with the highest number of pixels
 
         return state, terminated
 

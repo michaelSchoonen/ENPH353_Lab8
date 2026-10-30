@@ -3,8 +3,8 @@ from .envs.linefollower_env import LineFollowerEnv
 from gymnasium.envs.registration import register
 
 register(
-    id='LineFollowerEnv-v0',                                      
-    entry_point='gym_gazebo.envs.linefollower_env:LineFollowerEnv', # Registers the environment
+    id='CartpoleEnv-v0',                                      
+    entry_point='gym_gazebo.envs.cartpole_env:CartpoleEnv', # Registers the environment
     max_episode_steps=3000, # Value that set truncated to true. The maximum number of steps before reset                                 
 )
 

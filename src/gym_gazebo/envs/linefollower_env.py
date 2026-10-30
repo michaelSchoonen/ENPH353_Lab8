@@ -166,7 +166,7 @@ class LineFollowerEnv(GazeboEnv):
         @retval reward: the reward for the current step
         '''
         if terminated:
-            reward = -10
+            reward = -1000
 
         elif state == 1: # The robot is aligned with the line
             if action == 1:
